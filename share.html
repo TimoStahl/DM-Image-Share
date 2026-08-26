@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>DM Grid Share Pro</title>
+    <title>DM Image Share</title>
     <style>
       body {
         margin: 0;
@@ -292,6 +292,19 @@
         >
           Hide Screen (Blackout)
         </button>
+        <button class="control-btn" onclick="exportSession()">
+          Export Session
+        </button>
+        <button class="control-btn" onclick="triggerImport()">
+          Import Session
+        </button>
+        <input
+          type="file"
+          id="import-file-input"
+          accept=".json"
+          style="display: none"
+          onchange="importSession(event)"
+        />
       </div>
 
       <p style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px">
@@ -320,7 +333,7 @@
       let isBlackout = false;
 
       // DM State tracking for 10 slots
-      const slots = Array.from({ length: 10 }, (_, i) => ({
+      let slots = Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
         image: null,
         caption: "",
@@ -441,34 +454,55 @@
           const idx = slotId - 1;
 
           slots[idx].image = base64Image;
-          slots[idx].visible = false; // FIX: Hidden by default when loaded
+          slots[idx].visible = false;
 
-          // Update Card UI state
-          const card = document.getElementById(`slot-card-${slotId}`);
-          card.classList.add("has-image");
-          card.classList.remove("showing"); // Ensure the green 'showing' border is not added yet
-
-          const thumb = document.getElementById(`thumb-${slotId}`);
-          thumb.innerHTML = `<img src="${base64Image}" alt="Thumbnail">`;
-
-          const toggleBtn = document.getElementById(`toggle-${slotId}`);
-          toggleBtn.textContent = "Show"; // Button defaults to 'Show'
-          toggleBtn.classList.remove("showing");
-          toggleBtn.disabled = false;
-
-          const removeBtn = document.getElementById(`remove-${slotId}`);
-          removeBtn.disabled = false;
-
-          const captionInput = document.getElementById(`caption-${slotId}`);
-          captionInput.disabled = false;
-
-          broadcastState(); // Sync the loaded-but-hidden state
+          updateSlotUI(slotId);
+          broadcastState();
 
           status.textContent = `Slot ${slotId} loaded privately!`;
           status.style.color = "#2ecc71";
         };
 
         reader.readAsDataURL(file);
+      }
+
+      // Core UI Renderer - Single Source of Truth for rendering Slot States
+      function updateSlotUI(slotId) {
+        const idx = slotId - 1;
+        const slot = slots[idx];
+        const card = document.getElementById(`slot-card-${slotId}`);
+        const thumb = document.getElementById(`thumb-${slotId}`);
+        const toggleBtn = document.getElementById(`toggle-${slotId}`);
+        const removeBtn = document.getElementById(`remove-${slotId}`);
+        const captionInput = document.getElementById(`caption-${slotId}`);
+
+        if (slot.image) {
+          card.classList.add("has-image");
+          thumb.innerHTML = `<img src="${slot.image}" alt="Thumbnail">`;
+          toggleBtn.disabled = false;
+          removeBtn.disabled = false;
+          captionInput.disabled = false;
+          captionInput.value = slot.caption || "";
+
+          if (slot.visible) {
+            card.classList.add("showing");
+            toggleBtn.textContent = "Hide";
+            toggleBtn.classList.add("showing");
+          } else {
+            card.classList.remove("showing");
+            toggleBtn.textContent = "Show";
+            toggleBtn.classList.remove("showing");
+          }
+        } else {
+          card.className = "slot-card";
+          thumb.innerHTML = "No Image Loaded";
+          toggleBtn.textContent = "Show";
+          toggleBtn.classList.remove("showing");
+          toggleBtn.disabled = true;
+          removeBtn.disabled = true;
+          captionInput.value = "";
+          captionInput.disabled = true;
+        }
       }
 
       function updateCaption(slotId, text) {
@@ -485,19 +519,7 @@
 
         slots[idx].visible = !slots[idx].visible;
 
-        const card = document.getElementById(`slot-card-${slotId}`);
-        const toggleBtn = document.getElementById(`toggle-${slotId}`);
-
-        if (slots[idx].visible) {
-          card.classList.add("showing");
-          toggleBtn.textContent = "Hide";
-          toggleBtn.classList.add("showing");
-        } else {
-          card.classList.remove("showing");
-          toggleBtn.textContent = "Show";
-          toggleBtn.classList.remove("showing");
-        }
-
+        updateSlotUI(slotId);
         broadcastState();
       }
 
@@ -509,24 +531,7 @@
         slots[idx].visible = false;
         slots[idx].caption = "";
 
-        const card = document.getElementById(`slot-card-${slotId}`);
-        card.className = "slot-card";
-
-        const thumb = document.getElementById(`thumb-${slotId}`);
-        thumb.innerHTML = "No Image Loaded";
-
-        const toggleBtn = document.getElementById(`toggle-${slotId}`);
-        toggleBtn.textContent = "Show";
-        toggleBtn.classList.remove("showing");
-        toggleBtn.disabled = true;
-
-        const removeBtn = document.getElementById(`remove-${slotId}`);
-        removeBtn.disabled = true;
-
-        const captionInput = document.getElementById(`caption-${slotId}`);
-        captionInput.value = "";
-        captionInput.disabled = true;
-
+        updateSlotUI(slotId);
         broadcastState();
 
         const status = document.getElementById("status");
@@ -542,6 +547,59 @@
         btn.classList.toggle("blackout-active", isBlackout);
 
         channel.postMessage({ type: "blackout", active: isBlackout });
+      }
+
+      // --- SESSION IMPORT & EXPORT LOGIC ---
+      function exportSession() {
+        const jsonString = JSON.stringify(slots);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `dm_session_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        const status = document.getElementById("status");
+        status.textContent = "Session exported successfully!";
+        status.style.color = "#2ecc71";
+      }
+
+      function triggerImport() {
+        document.getElementById("import-file-input").click();
+      }
+
+      function importSession(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const importedSlots = JSON.parse(e.target.result);
+            if (Array.isArray(importedSlots) && importedSlots.length === 10) {
+              slots = importedSlots;
+              // Re-render each Slot's UI card
+              for (let i = 1; i <= 10; i++) {
+                updateSlotUI(i);
+              }
+              broadcastState();
+
+              const status = document.getElementById("status");
+              status.textContent = "Session loaded successfully!";
+              status.style.color = "#2ecc71";
+            } else {
+              alert("Invalid save file format.");
+            }
+          } catch (err) {
+            alert("Failed to parse save file.");
+          }
+          event.target.value = ""; // Reset input
+        };
+        reader.readAsText(file);
       }
 
       function broadcastState() {
