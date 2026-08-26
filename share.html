@@ -89,7 +89,7 @@
         transition: all 0.2s;
         position: relative;
       }
-      .slot-card:focus {
+      .slot-card:focus-within {
         border-color: #3498db;
         background-color: #1a2a3a;
       }
@@ -130,6 +130,28 @@
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
+      }
+
+      /* DM Caption Input Styling */
+      .caption-input {
+        width: 100%;
+        padding: 6px;
+        margin-top: 8px;
+        background-color: #111;
+        border: 1px solid #444;
+        color: white;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-size: 0.85rem;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .caption-input:focus {
+        border-color: #3498db;
+      }
+      .caption-input:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
       }
 
       /* Small Controls underneath each preview card */
@@ -174,7 +196,7 @@
 
       /* Player View Window Styling */
       #display-container {
-        display: none; /* Hidden by default during role selection */
+        display: none;
         width: 100vw;
         height: 100vh;
         justify-content: center;
@@ -186,9 +208,10 @@
         overflow: hidden;
       }
 
-      /* Protective wrapper prevents the grid tracks from blowing out */
+      /* Protective wrapper prevents track blowout and organizes vertical alignment */
       .player-img-wrapper {
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         width: 100%;
@@ -196,12 +219,30 @@
         overflow: hidden;
       }
 
-      /* Force image to stay strictly inside the wrapper, complete and uncropped */
+      /* Force image to scale down cleanly, leaving room for the caption */
       .player-img {
+        flex: 1;
+        min-height: 0; /* Vital: enables image scaling inside flex container */
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
         border-radius: 4px;
+      }
+
+      /* Stylized caption for players */
+      .player-caption {
+        margin-top: 10px;
+        font-size: 1.4rem;
+        font-weight: bold;
+        text-align: center;
+        color: #ffffff;
+        background-color: rgba(0, 0, 0, 0.7);
+        padding: 6px 16px;
+        border-radius: 5px;
+        max-width: 90%;
+        word-wrap: break-word;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        flex-shrink: 0; /* Prevents text from being squeezed */
       }
 
       /* Stylized placeholder for the players */
@@ -282,6 +323,7 @@
       const slots = Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
         image: null,
+        caption: "",
         visible: false,
       }));
 
@@ -293,7 +335,7 @@
           setupDM();
         } else {
           setupPlayer();
-          renderPlayerGrid([]); // Initialize empty state/placeholder
+          renderPlayerGrid([]);
         }
       }
 
@@ -312,6 +354,7 @@
           card.innerHTML = `
                     <div class="slot-header">Slot ${i}</div>
                     <div class="thumb-preview" id="thumb-${i}">No Image Loaded</div>
+                    <input type="text" class="caption-input" id="caption-${i}" placeholder="Enter caption..." oninput="updateCaption(${i}, this.value)" disabled>
                     <div class="slot-controls">
                         <button class="slot-btn toggle-btn" id="toggle-${i}" onclick="toggleSlot(${i}, event)" disabled>Show</button>
                         <button class="slot-btn remove-btn" id="remove-${i}" onclick="clearSlot(${i}, event)" disabled>Remove</button>
@@ -325,6 +368,8 @@
         // Global Paste Listener
         document.addEventListener("paste", (e) => {
           const activeCard = document.activeElement;
+
+          // Only trigger paste if the card container itself is selected (not the caption text input inside it)
           if (activeCard && activeCard.classList.contains("slot-card")) {
             const slotId = parseInt(activeCard.dataset.slot);
             const items = e.clipboardData.items;
@@ -375,8 +420,11 @@
           }
         });
 
-        element.addEventListener("click", () => {
-          element.focus();
+        // Focus the card if clicked (excluding the controls/input)
+        element.addEventListener("click", (e) => {
+          if (e.target.tagName !== "INPUT" && e.target.tagName !== "BUTTON") {
+            element.focus();
+          }
         });
       }
 
@@ -412,6 +460,9 @@
           const removeBtn = document.getElementById(`remove-${slotId}`);
           removeBtn.disabled = false;
 
+          const captionInput = document.getElementById(`caption-${slotId}`);
+          captionInput.disabled = false;
+
           broadcastState();
 
           status.textContent = `Slot ${slotId} updated!`;
@@ -419,6 +470,12 @@
         };
 
         reader.readAsDataURL(file);
+      }
+
+      function updateCaption(slotId, text) {
+        const idx = slotId - 1;
+        slots[idx].caption = text;
+        broadcastState();
       }
 
       function toggleSlot(slotId, event) {
@@ -451,6 +508,7 @@
         const idx = slotId - 1;
         slots[idx].image = null;
         slots[idx].visible = false;
+        slots[idx].caption = "";
 
         const card = document.getElementById(`slot-card-${slotId}`);
         card.className = "slot-card";
@@ -465,6 +523,10 @@
 
         const removeBtn = document.getElementById(`remove-${slotId}`);
         removeBtn.disabled = true;
+
+        const captionInput = document.getElementById(`caption-${slotId}`);
+        captionInput.value = "";
+        captionInput.disabled = true;
 
         broadcastState();
 
@@ -484,11 +546,12 @@
       }
 
       function broadcastState() {
-        const visibleImages = slots
+        // Packages the image data alongside its typed caption
+        const visibleItems = slots
           .filter((s) => s.image && s.visible)
-          .map((s) => s.image);
+          .map((s) => ({ image: s.image, caption: s.caption }));
 
-        channel.postMessage({ type: "sync", images: visibleImages });
+        channel.postMessage({ type: "sync", items: visibleItems });
       }
 
       // --- Player logic ---
@@ -498,7 +561,7 @@
           if (!msg) return;
 
           if (msg.type === "sync") {
-            renderPlayerGrid(msg.images);
+            renderPlayerGrid(msg.items);
           } else if (msg.type === "blackout") {
             document.getElementById("blackout-overlay").style.display =
               msg.active ? "block" : "none";
@@ -506,22 +569,20 @@
         };
       }
 
-      function renderPlayerGrid(images) {
+      function renderPlayerGrid(items) {
         const container = document.getElementById("display-container");
         const placeholder = document.getElementById("player-placeholder");
 
-        // Clean out the previous wrappers
         const currentWrappers = container.querySelectorAll(
           ".player-img-wrapper",
         );
         currentWrappers.forEach((wrap) => wrap.remove());
 
-        // Slice the array to a maximum of 9 images (ignoring the 10th if active)
-        const imagesToShow = images.slice(0, 9);
+        // Limit display to 9 items
+        const itemsToShow = items.slice(0, 9);
 
-        if (!imagesToShow || imagesToShow.length === 0) {
+        if (!itemsToShow || itemsToShow.length === 0) {
           placeholder.style.display = "block";
-          // FIX: Force display to 'flex' so the placeholder is centered nicely
           container.style.display = "flex";
           container.style.gridTemplateColumns = "";
           container.style.gridTemplateRows = "";
@@ -529,39 +590,45 @@
         }
 
         placeholder.style.display = "none";
-        // FIX: Force inline display to 'grid' to overwrite previous inline styling
         container.style.display = "grid";
 
-        const n = imagesToShow.length;
+        const n = itemsToShow.length;
         const config = getGridConfig(n);
         container.style.gridTemplateColumns = config.cols;
         container.style.gridTemplateRows = config.rows;
 
-        imagesToShow.forEach((base64) => {
+        itemsToShow.forEach((item) => {
           const wrapper = document.createElement("div");
           wrapper.className = "player-img-wrapper";
 
           const img = document.createElement("img");
           img.className = "player-img";
-          img.src = base64;
-
+          img.src = item.image;
           wrapper.appendChild(img);
+
+          // Dynamically build and add the caption overlay if text has been entered
+          if (item.caption && item.caption.trim() !== "") {
+            const caption = document.createElement("div");
+            caption.className = "player-caption";
+            caption.textContent = item.caption;
+            wrapper.appendChild(caption);
+          }
+
           container.appendChild(wrapper);
         });
       }
 
-      // Exact Row & Column layout mappings matching your request
       function getGridConfig(n) {
-        if (n === 1) return { cols: "1fr", rows: "1fr" }; // 1 row, 1 col
-        if (n === 2) return { cols: "1fr 1fr", rows: "1fr" }; // 1 row, 2 col
-        if (n === 3) return { cols: "1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 2 col
-        if (n === 4) return { cols: "1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 2 col
-        if (n === 5) return { cols: "1fr 1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 3 col
-        if (n === 6) return { cols: "1fr 1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 3 col
-        if (n === 7) return { cols: "1fr 1fr 1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 4 col
-        if (n === 8) return { cols: "1fr 1fr 1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 4 col
-        if (n === 9) return { cols: "1fr 1fr 1fr", rows: "1fr 1fr 1fr" }; // 3 rows, 3 col
-        return { cols: "1fr 1fr 1fr", rows: "1fr 1fr 1fr" }; // fallback safety
+        if (n === 1) return { cols: "1fr", rows: "1fr" };
+        if (n === 2) return { cols: "1fr 1fr", rows: "1fr" };
+        if (n === 3) return { cols: "1fr 1fr", rows: "1fr 1fr" };
+        if (n === 4) return { cols: "1fr 1fr", rows: "1fr 1fr" };
+        if (n === 5) return { cols: "1fr 1fr 1fr", rows: "1fr 1fr" };
+        if (n === 6) return { cols: "1fr 1fr 1fr", rows: "1fr 1fr" };
+        if (n === 7) return { cols: "1fr 1fr 1fr 1fr", rows: "1fr 1fr" };
+        if (n === 8) return { cols: "1fr 1fr 1fr 1fr", rows: "1fr 1fr" };
+        if (n === 9) return { cols: "1fr 1fr 1fr", rows: "1fr 1fr 1fr" };
+        return { cols: "1fr 1fr 1fr", rows: "1fr 1fr 1fr" };
       }
     </script>
   </body>
