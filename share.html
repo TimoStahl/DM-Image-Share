@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>DM Screen Share</title>
+    <title>DM Screen Share Pro</title>
     <style>
       body {
         margin: 0;
@@ -77,6 +77,7 @@
       }
       .paste-box {
         flex: 1;
+        position: relative; /* Allows absolute positioning for the remove button */
         border: 3px dashed #666;
         border-radius: 10px;
         padding: 15px;
@@ -125,6 +126,31 @@
         object-fit: contain;
       }
 
+      /* Red Remove Button Style */
+      .remove-btn {
+        display: none; /* Hidden by default */
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #e74c3c;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 10px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.2s;
+        z-index: 10;
+      }
+      .remove-btn:hover {
+        background-color: #c0392b;
+      }
+      /* Show the remove button only when an image is loaded */
+      .paste-box.has-image .remove-btn {
+        display: block;
+      }
+
       /* Hide Right Box when DM is in Single Layout */
       .dm-single #paste-box-2 {
         display: none;
@@ -148,7 +174,7 @@
         display: none;
       }
 
-      /* FIX: Only show images if they actually have a src attribute */
+      /* Only show images if they actually have a src attribute */
       #display-container.layout-single #img-left[src] {
         display: block;
         max-width: 100%;
@@ -234,6 +260,9 @@
         >
           <span class="box-label">Left / Main Image</span>
           <div class="thumb-preview" id="thumb-1">No Image Loaded</div>
+          <button class="remove-btn" onclick="clearImage(1, event)">
+            Remove
+          </button>
         </div>
         <div
           id="paste-box-2"
@@ -243,6 +272,9 @@
         >
           <span class="box-label">Right Image</span>
           <div class="thumb-preview" id="thumb-2">No Image Loaded</div>
+          <button class="remove-btn" onclick="clearImage(2, event)">
+            Remove
+          </button>
         </div>
       </div>
 
@@ -288,7 +320,10 @@
         reader.onload = function (event) {
           const base64Image = event.target.result;
 
-          // 1. Update DM Thumbnail
+          // 1. Update DM Thumbnail and mark box as loaded
+          const box = document.getElementById("paste-box-" + slot);
+          box.classList.add("has-image");
+
           const thumb = document.getElementById("thumb-" + slot);
           thumb.innerHTML = `<img src="${base64Image}" alt="Thumbnail">`;
 
@@ -357,6 +392,26 @@
         });
       }
 
+      // Clear loaded image
+      function clearImage(slot, event) {
+        if (event) {
+          event.stopPropagation(); // Prevents the parent box from triggering "focus" click event
+        }
+
+        const box = document.getElementById("paste-box-" + slot);
+        box.classList.remove("has-image");
+
+        const thumb = document.getElementById("thumb-" + slot);
+        thumb.innerHTML = "No Image Loaded";
+
+        // Send clear signal to Player View
+        channel.postMessage({ type: "clear", slot: slot });
+
+        const status = document.getElementById("status");
+        status.textContent = `Image ${slot} removed!`;
+        status.style.color = "#e74c3c";
+      }
+
       function setLayout(mode) {
         document
           .getElementById("btn-single")
@@ -387,24 +442,50 @@
           if (!msg) return;
 
           if (msg.type === "image") {
-            // Hide the placeholder text when the first image arrives
-            const placeholder = document.getElementById("player-placeholder");
-            if (placeholder) {
-              placeholder.style.display = "none";
-            }
-
             const imgElement = document.getElementById(
               msg.slot === 1 ? "img-left" : "img-right",
             );
             imgElement.src = msg.data;
+            updatePlaceholderVisibility();
+          } else if (msg.type === "clear") {
+            const imgElement = document.getElementById(
+              msg.slot === 1 ? "img-left" : "img-right",
+            );
+            imgElement.removeAttribute("src");
+            updatePlaceholderVisibility();
           } else if (msg.type === "layout") {
             const container = document.getElementById("display-container");
             container.className = "layout-" + msg.mode;
+            updatePlaceholderVisibility();
           } else if (msg.type === "blackout") {
             document.getElementById("blackout-overlay").style.display =
               msg.active ? "block" : "none";
           }
         };
+      }
+
+      // Smart logic to decide if "Waiting for DM..." placeholder should be shown
+      function updatePlaceholderVisibility() {
+        const container = document.getElementById("display-container");
+        const imgLeft = document.getElementById("img-left");
+        const imgRight = document.getElementById("img-right");
+        const placeholder = document.getElementById("player-placeholder");
+
+        const isSingle = container.classList.contains("layout-single");
+        const hasLeft = imgLeft.hasAttribute("src");
+        const hasRight = imgRight.hasAttribute("src");
+
+        let shouldShowPlaceholder = false;
+
+        if (isSingle) {
+          // In single layout, show placeholder if the main (left) image is missing
+          shouldShowPlaceholder = !hasLeft;
+        } else {
+          // In dual layout, show placeholder if BOTH images are missing
+          shouldShowPlaceholder = !hasLeft && !hasRight;
+        }
+
+        placeholder.style.display = shouldShowPlaceholder ? "block" : "none";
       }
     </script>
   </body>
