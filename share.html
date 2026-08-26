@@ -67,7 +67,7 @@
         background-color: #3d1b1b;
       }
 
-      /* Interactive Paste Boxes */
+      /* Interactive Paste/Drop Boxes */
       .paste-container {
         display: flex;
         justify-content: center;
@@ -94,10 +94,16 @@
         border-color: #3498db;
         background-color: #1a2a3a;
       }
+      /* Highlight box when dragging a file over it */
+      .paste-box.drag-over {
+        border-color: #2ecc71;
+        background-color: #1b3d22;
+      }
       .box-label {
         font-weight: bold;
         font-size: 1.1rem;
         color: #ccc;
+        pointer-events: none; /* Prevents interference with drag/drop target */
       }
       .thumb-preview {
         width: 100%;
@@ -111,6 +117,7 @@
         color: #555;
         font-size: 0.9rem;
         overflow: hidden;
+        pointer-events: none; /* Prevents interference with drag/drop target */
       }
       .thumb-preview img {
         max-width: 100%;
@@ -203,11 +210,11 @@
       </div>
 
       <p style="font-size: 0.9rem; color: #aaa">
-        Click a box below to focus it, then press 'Ctrl + V' to paste your
-        screenshot.
+        Click to focus and paste ('Ctrl + V'), or drag and drop an image file
+        directly into a box below.
       </p>
 
-      <!-- Paste Areas -->
+      <!-- Paste/Drop Areas -->
       <div class="paste-container">
         <div
           id="paste-box-1"
@@ -257,49 +264,88 @@
         }
       }
 
+      // --- Shared Image Processor ---
+      function processImageFile(file, slot) {
+        if (!file || !file.type.startsWith("image/")) return;
+
+        const status = document.getElementById("status");
+        status.textContent = "Processing image...";
+        status.style.color = "#e67e22";
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+          const base64Image = event.target.result;
+
+          // 1. Update DM Thumbnail
+          const thumb = document.getElementById("thumb-" + slot);
+          thumb.innerHTML = `<img src="${base64Image}" alt="Thumbnail">`;
+
+          // 2. Send image data to Player View
+          channel.postMessage({ type: "image", slot: slot, data: base64Image });
+
+          status.textContent = `Image ${slot} updated!`;
+          status.style.color = "#2ecc71";
+        };
+
+        reader.readAsDataURL(file);
+      }
+
       // --- DM logic ---
       function setupDM() {
-        setupPasteListener(document.getElementById("paste-box-1"), 1);
-        setupPasteListener(document.getElementById("paste-box-2"), 2);
+        setupBoxListeners(document.getElementById("paste-box-1"), 1);
+        setupBoxListeners(document.getElementById("paste-box-2"), 2);
 
         // Auto-focus the first box on load
         document.getElementById("paste-box-1").focus();
       }
 
-      function setupPasteListener(element, slot) {
+      function setupBoxListeners(element, slot) {
+        // 1. Paste Event
         element.addEventListener("paste", (e) => {
           const items = e.clipboardData.items;
-          const status = document.getElementById("status");
-
           for (let i = 0; i < items.length; i++) {
             if (items[i].type.startsWith("image/")) {
               const file = items[i].getAsFile();
-              const reader = new FileReader();
-
-              status.textContent = "Processing image...";
-              status.style.color = "#e67e22";
-
-              reader.onload = function (event) {
-                const base64Image = event.target.result;
-
-                // 1. Update DM Thumbnail
-                const thumb = document.getElementById("thumb-" + slot);
-                thumb.innerHTML = `<img src="${base64Image}" alt="Thumbnail">`;
-
-                // 2. Send image data to Player View
-                channel.postMessage({
-                  type: "image",
-                  slot: slot,
-                  data: base64Image,
-                });
-
-                status.textContent = `Image ${slot} updated!`;
-                status.style.color = "#2ecc71";
-              };
-
-              reader.readAsDataURL(file);
+              processImageFile(file, slot);
               break;
             }
+          }
+        });
+
+        // 2. Drag and Drop Events
+        // Prevent default system actions for dragging files
+        ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+          element.addEventListener(eventName, (e) => e.preventDefault(), false);
+        });
+
+        // Add highlight class when dragging file over the box
+        ["dragenter", "dragover"].forEach((eventName) => {
+          element.addEventListener(
+            eventName,
+            () => {
+              element.classList.add("drag-over");
+            },
+            false,
+          );
+        });
+
+        // Remove highlight class when leaving or dropping
+        ["dragleave", "drop"].forEach((eventName) => {
+          element.addEventListener(
+            eventName,
+            () => {
+              element.classList.remove("drag-over");
+            },
+            false,
+          );
+        });
+
+        // Handle the dropped file
+        element.addEventListener("drop", (e) => {
+          const files = e.dataTransfer.files;
+          if (files.length > 0) {
+            processImageFile(files[0], slot);
           }
         });
       }
