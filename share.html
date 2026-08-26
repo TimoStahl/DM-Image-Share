@@ -103,7 +103,7 @@
         font-weight: bold;
         font-size: 1.1rem;
         color: #ccc;
-        pointer-events: none; /* Prevents interference with drag/drop target */
+        pointer-events: none;
       }
       .thumb-preview {
         width: 100%;
@@ -117,7 +117,7 @@
         color: #555;
         font-size: 0.9rem;
         overflow: hidden;
-        pointer-events: none; /* Prevents interference with drag/drop target */
+        pointer-events: none;
       }
       .thumb-preview img {
         max-width: 100%;
@@ -148,17 +148,27 @@
         display: none;
       }
 
-      /* Player View Single Layout Rule */
-      #display-container.layout-single #img-left {
+      /* FIX: Only show images if they actually have a src attribute */
+      #display-container.layout-single #img-left[src] {
         display: block;
         max-width: 100%;
       }
 
-      /* Player View Dual Layout Rule */
-      #display-container.layout-dual #img-left,
-      #display-container.layout-dual #img-right {
+      #display-container.layout-dual #img-left[src],
+      #display-container.layout-dual #img-right[src] {
         display: block;
         max-width: calc(50% - 10px);
+      }
+
+      /* Stylized placeholder for the players */
+      #player-placeholder {
+        font-size: 1.8rem;
+        color: #444;
+        font-weight: bold;
+        text-align: center;
+        border: 2px dashed #333;
+        padding: 40px 60px;
+        border-radius: 10px;
       }
 
       /* Blackout Screen Mask */
@@ -241,6 +251,7 @@
 
     <!-- Player View Container -->
     <div id="display-container" class="layout-single">
+      <div id="player-placeholder">Waiting for DM...</div>
       <img id="img-left" class="player-img" alt="Left View" />
       <img id="img-right" class="player-img" alt="Right View" />
     </div>
@@ -314,12 +325,10 @@
         });
 
         // 2. Drag and Drop Events
-        // Prevent default system actions for dragging files
         ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
           element.addEventListener(eventName, (e) => e.preventDefault(), false);
         });
 
-        // Add highlight class when dragging file over the box
         ["dragenter", "dragover"].forEach((eventName) => {
           element.addEventListener(
             eventName,
@@ -330,7 +339,6 @@
           );
         });
 
-        // Remove highlight class when leaving or dropping
         ["dragleave", "drop"].forEach((eventName) => {
           element.addEventListener(
             eventName,
@@ -341,7 +349,6 @@
           );
         });
 
-        // Handle the dropped file
         element.addEventListener("drop", (e) => {
           const files = e.dataTransfer.files;
           if (files.length > 0) {
@@ -358,10 +365,8 @@
           .getElementById("btn-dual")
           .classList.toggle("active", mode === "dual");
 
-        // Toggle local DM interface classes to show/hide the second box
         document.getElementById("dm-view").className = "dm-" + mode;
 
-        // Broadcast layout change to player screen
         channel.postMessage({ type: "layout", mode: mode });
       }
 
@@ -372,7 +377,6 @@
         btn.textContent = isBlackout ? "Show Screen" : "Hide Screen (Blackout)";
         btn.classList.toggle("blackout-active", isBlackout);
 
-        // Broadcast blackout trigger
         channel.postMessage({ type: "blackout", active: isBlackout });
       }
 
@@ -383,6 +387,12 @@
           if (!msg) return;
 
           if (msg.type === "image") {
+            // Hide the placeholder text when the first image arrives
+            const placeholder = document.getElementById("player-placeholder");
+            if (placeholder) {
+              placeholder.style.display = "none";
+            }
+
             const imgElement = document.getElementById(
               msg.slot === 1 ? "img-left" : "img-right",
             );
