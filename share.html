@@ -34,27 +34,136 @@
       .role-btn:hover {
         background-color: #666;
       }
+
+      /* DM Control Panel Panel Styling */
       #dm-view {
         text-align: center;
+        max-width: 800px;
+        width: 90%;
       }
-      #paste-area {
+      .control-group {
+        margin-bottom: 20px;
+      }
+      .control-btn {
+        padding: 10px 20px;
+        font-size: 1rem;
+        margin: 5px;
+        cursor: pointer;
+        border: 2px solid #555;
+        background-color: #222;
+        color: white;
+        border-radius: 5px;
+        transition: all 0.2s;
+      }
+      .control-btn:hover {
+        background-color: #333;
+      }
+      .control-btn.active {
+        border-color: #2ecc71;
+        background-color: #1b3d22;
+      }
+      .control-btn.blackout-active {
+        border-color: #e74c3c;
+        background-color: #3d1b1b;
+      }
+
+      /* Interactive Paste Boxes */
+      .paste-container {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 20px;
+        height: 250px;
+      }
+      .paste-box {
+        flex: 1;
         border: 3px dashed #666;
         border-radius: 10px;
-        padding: 60px 100px;
-        margin-top: 20px;
+        padding: 15px;
         cursor: pointer;
-        font-size: 1.2rem;
         background-color: #222;
+        outline: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s;
+        box-sizing: border-box;
       }
-      #paste-area:hover {
-        border-color: #888;
-        background-color: #2a2a2a;
+      .paste-box:focus {
+        border-color: #3498db;
+        background-color: #1a2a3a;
       }
-      #display-img {
-        max-width: 100vw;
-        max-height: 100vh;
+      .box-label {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #ccc;
+      }
+      .thumb-preview {
+        width: 100%;
+        height: 160px;
+        border: 1px solid #444;
+        background-color: #111;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #555;
+        font-size: 0.9rem;
+        overflow: hidden;
+      }
+      .thumb-preview img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      /* Hide Right Box when DM is in Single Layout */
+      .dm-single #paste-box-2 {
+        display: none;
+      }
+
+      /* Player View Window Styling */
+      #display-container {
+        display: none;
+        width: 100vw;
+        height: 100vh;
+        justify-content: center;
+        align-items: center;
+        background-color: #1a1a1a;
+        box-sizing: border-box;
+        padding: 20px;
+        gap: 20px;
+      }
+      .player-img {
+        max-height: 100%;
         object-fit: contain;
         display: none;
+      }
+
+      /* Player View Single Layout Rule */
+      #display-container.layout-single #img-left {
+        display: block;
+        max-width: 100%;
+      }
+
+      /* Player View Dual Layout Rule */
+      #display-container.layout-dual #img-left,
+      #display-container.layout-dual #img-right {
+        display: block;
+        max-width: calc(50% - 10px);
+      }
+
+      /* Blackout Screen Mask */
+      #blackout-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #1a1a1a;
+        display: none;
+        z-index: 9999;
       }
     </style>
   </head>
@@ -69,19 +178,72 @@
     </div>
 
     <!-- DM View -->
-    <div id="dm-view" style="display: none">
+    <div id="dm-view" style="display: none" class="dm-single">
       <h2>DM Control Panel</h2>
-      <p>Click inside the box and press 'Ctrl + V' to paste your screenshot.</p>
-      <div id="paste-area">Paste Image Here</div>
-      <p>Status: <span id="status" style="color: #888">Ready</span></p>
+
+      <!-- Controls -->
+      <div class="control-group">
+        <button
+          class="control-btn active"
+          id="btn-single"
+          onclick="setLayout('single')"
+        >
+          Single View
+        </button>
+        <button class="control-btn" id="btn-dual" onclick="setLayout('dual')">
+          Dual (Side-by-Side)
+        </button>
+        <button
+          class="control-btn"
+          id="btn-blackout"
+          onclick="toggleBlackout()"
+        >
+          Hide Screen (Blackout)
+        </button>
+      </div>
+
+      <p style="font-size: 0.9rem; color: #aaa">
+        Click a box below to focus it, then press 'Ctrl + V' to paste your
+        screenshot.
+      </p>
+
+      <!-- Paste Areas -->
+      <div class="paste-container">
+        <div
+          id="paste-box-1"
+          class="paste-box"
+          tabindex="0"
+          onclick="this.focus()"
+        >
+          <span class="box-label">Left / Main Image</span>
+          <div class="thumb-preview" id="thumb-1">No Image Loaded</div>
+        </div>
+        <div
+          id="paste-box-2"
+          class="paste-box"
+          tabindex="0"
+          onclick="this.focus()"
+        >
+          <span class="box-label">Right Image</span>
+          <div class="thumb-preview" id="thumb-2">No Image Loaded</div>
+        </div>
+      </div>
+
+      <p>Status: <span id="status" style="color: #2ecc71">Ready</span></p>
     </div>
 
-    <!-- Player View Image -->
-    <img id="display-img" alt="Shared Screen" />
+    <!-- Player View Container -->
+    <div id="display-container" class="layout-single">
+      <img id="img-left" class="player-img" alt="Left View" />
+      <img id="img-right" class="player-img" alt="Right View" />
+    </div>
+
+    <!-- Blackout Screen Overlay -->
+    <div id="blackout-overlay"></div>
 
     <script>
-      // Setup the communication channel
-      const channel = new BroadcastChannel("dm_screen_share");
+      const channel = new BroadcastChannel("dm_screen_share_pro");
+      let isBlackout = false;
 
       function initRole(role) {
         document.getElementById("setup").style.display = "none";
@@ -90,19 +252,26 @@
           document.getElementById("dm-view").style.display = "block";
           setupDM();
         } else {
-          document.getElementById("display-img").style.display = "block";
+          document.getElementById("display-container").style.display = "flex";
           setupPlayer();
         }
       }
 
+      // --- DM logic ---
       function setupDM() {
-        const status = document.getElementById("status");
+        setupPasteListener(document.getElementById("paste-box-1"), 1);
+        setupPasteListener(document.getElementById("paste-box-2"), 2);
 
-        // Listen for the paste event on the document
-        document.addEventListener("paste", (e) => {
+        // Auto-focus the first box on load
+        document.getElementById("paste-box-1").focus();
+      }
+
+      function setupPasteListener(element, slot) {
+        element.addEventListener("paste", (e) => {
           const items = e.clipboardData.items;
+          const status = document.getElementById("status");
+
           for (let i = 0; i < items.length; i++) {
-            // Check if the pasted item is an image
             if (items[i].type.startsWith("image/")) {
               const file = items[i].getAsFile();
               const reader = new FileReader();
@@ -112,9 +281,19 @@
 
               reader.onload = function (event) {
                 const base64Image = event.target.result;
-                // Send the image to the player tab
-                channel.postMessage({ image: base64Image });
-                status.textContent = "Sent successfully!";
+
+                // 1. Update DM Thumbnail
+                const thumb = document.getElementById("thumb-" + slot);
+                thumb.innerHTML = `<img src="${base64Image}" alt="Thumbnail">`;
+
+                // 2. Send image data to Player View
+                channel.postMessage({
+                  type: "image",
+                  slot: slot,
+                  data: base64Image,
+                });
+
+                status.textContent = `Image ${slot} updated!`;
                 status.style.color = "#2ecc71";
               };
 
@@ -125,13 +304,49 @@
         });
       }
 
-      function setupPlayer() {
-        const displayImg = document.getElementById("display-img");
+      function setLayout(mode) {
+        document
+          .getElementById("btn-single")
+          .classList.toggle("active", mode === "single");
+        document
+          .getElementById("btn-dual")
+          .classList.toggle("active", mode === "dual");
 
-        // Listen for images sent from the DM tab
+        // Toggle local DM interface classes to show/hide the second box
+        document.getElementById("dm-view").className = "dm-" + mode;
+
+        // Broadcast layout change to player screen
+        channel.postMessage({ type: "layout", mode: mode });
+      }
+
+      function toggleBlackout() {
+        isBlackout = !isBlackout;
+        const btn = document.getElementById("btn-blackout");
+
+        btn.textContent = isBlackout ? "Show Screen" : "Hide Screen (Blackout)";
+        btn.classList.toggle("blackout-active", isBlackout);
+
+        // Broadcast blackout trigger
+        channel.postMessage({ type: "blackout", active: isBlackout });
+      }
+
+      // --- Player logic ---
+      function setupPlayer() {
         channel.onmessage = function (event) {
-          if (event.data && event.data.image) {
-            displayImg.src = event.data.image;
+          const msg = event.data;
+          if (!msg) return;
+
+          if (msg.type === "image") {
+            const imgElement = document.getElementById(
+              msg.slot === 1 ? "img-left" : "img-right",
+            );
+            imgElement.src = msg.data;
+          } else if (msg.type === "layout") {
+            const container = document.getElementById("display-container");
+            container.className = "layout-" + msg.mode;
+          } else if (msg.type === "blackout") {
+            document.getElementById("blackout-overlay").style.display =
+              msg.active ? "block" : "none";
           }
         };
       }
