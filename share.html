@@ -174,7 +174,7 @@
 
       /* Player View Window Styling */
       #display-container {
-        display: none;
+        display: none; /* Hidden by default during role selection */
         width: 100vw;
         height: 100vh;
         justify-content: center;
@@ -183,29 +183,24 @@
         box-sizing: border-box;
         padding: 20px;
         gap: 20px;
-        overflow: hidden; /* Prevent scrollbars */
+        overflow: hidden;
       }
 
-      /* Dynamic Grid Layout applied via JS */
-      #display-container.layout-grid {
-        display: grid;
-      }
-
-      /* FIX: Protective wrapper prevents the grid tracks from blowing out */
+      /* Protective wrapper prevents the grid tracks from blowing out */
       .player-img-wrapper {
         display: flex;
         justify-content: center;
         align-items: center;
         width: 100%;
         height: 100%;
-        overflow: hidden; /* Crucial: stops browser from scaling cell based on image resolution */
+        overflow: hidden;
       }
 
-      /* FIX: Force image to stay strictly inside the wrapper, complete and uncropped */
+      /* Force image to stay strictly inside the wrapper, complete and uncropped */
       .player-img {
         max-width: 100%;
         max-height: 100%;
-        object-fit: contain; /* Ensures complete image is visible, maintaining original aspect ratio */
+        object-fit: contain;
         border-radius: 4px;
       }
 
@@ -297,8 +292,8 @@
           document.getElementById("dm-view").style.display = "block";
           setupDM();
         } else {
-          document.getElementById("display-container").style.display = "flex";
           setupPlayer();
+          renderPlayerGrid([]); // Initialize empty state/placeholder
         }
       }
 
@@ -515,30 +510,34 @@
         const container = document.getElementById("display-container");
         const placeholder = document.getElementById("player-placeholder");
 
-        // FIX: Clean out the previous wrappers
+        // Clean out the previous wrappers
         const currentWrappers = container.querySelectorAll(
           ".player-img-wrapper",
         );
         currentWrappers.forEach((wrap) => wrap.remove());
 
-        if (!images || images.length === 0) {
+        // Slice the array to a maximum of 9 images (ignoring the 10th if active)
+        const imagesToShow = images.slice(0, 9);
+
+        if (!imagesToShow || imagesToShow.length === 0) {
           placeholder.style.display = "block";
-          container.className = "";
+          // FIX: Force display to 'flex' so the placeholder is centered nicely
+          container.style.display = "flex";
           container.style.gridTemplateColumns = "";
           container.style.gridTemplateRows = "";
           return;
         }
 
         placeholder.style.display = "none";
-        container.className = "layout-grid";
+        // FIX: Force inline display to 'grid' to overwrite previous inline styling
+        container.style.display = "grid";
 
-        const n = images.length;
+        const n = imagesToShow.length;
         const config = getGridConfig(n);
         container.style.gridTemplateColumns = config.cols;
         container.style.gridTemplateRows = config.rows;
 
-        // FIX: Append images wrapped in a protective layout div
-        images.forEach((base64) => {
+        imagesToShow.forEach((base64) => {
           const wrapper = document.createElement("div");
           wrapper.className = "player-img-wrapper";
 
@@ -551,14 +550,18 @@
         });
       }
 
+      // Exact Row & Column layout mappings matching your request
       function getGridConfig(n) {
-        if (n === 1) return { cols: "1fr", rows: "1fr" };
-        if (n === 2) return { cols: "1fr 1fr", rows: "1fr" };
-        if (n === 3) return { cols: "repeat(3, 1fr)", rows: "1fr" };
-        if (n === 4) return { cols: "1fr 1fr", rows: "1fr 1fr" };
-        if (n <= 6) return { cols: "repeat(3, 1fr)", rows: "repeat(2, 1fr)" };
-        if (n <= 9) return { cols: "repeat(3, 1fr)", rows: "repeat(3, 1fr)" };
-        return { cols: "repeat(4, 1fr)", rows: "repeat(3, 1fr)" };
+        if (n === 1) return { cols: "1fr", rows: "1fr" }; // 1 row, 1 col
+        if (n === 2) return { cols: "1fr 1fr", rows: "1fr" }; // 1 row, 2 col
+        if (n === 3) return { cols: "1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 2 col
+        if (n === 4) return { cols: "1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 2 col
+        if (n === 5) return { cols: "1fr 1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 3 col
+        if (n === 6) return { cols: "1fr 1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 3 col
+        if (n === 7) return { cols: "1fr 1fr 1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 4 col
+        if (n === 8) return { cols: "1fr 1fr 1fr 1fr", rows: "1fr 1fr" }; // 2 rows, 4 col
+        if (n === 9) return { cols: "1fr 1fr 1fr", rows: "1fr 1fr 1fr" }; // 3 rows, 3 col
+        return { cols: "1fr 1fr 1fr", rows: "1fr 1fr 1fr" }; // fallback safety
       }
     </script>
   </body>
