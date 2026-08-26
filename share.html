@@ -222,7 +222,7 @@
       /* Force image to scale down cleanly, leaving room for the caption */
       .player-img {
         flex: 1;
-        min-height: 0; /* Vital: enables image scaling inside flex container */
+        min-height: 0;
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
@@ -242,7 +242,7 @@
         max-width: 90%;
         word-wrap: break-word;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        flex-shrink: 0; /* Prevents text from being squeezed */
+        flex-shrink: 0;
       }
 
       /* Stylized placeholder for the players */
@@ -369,7 +369,6 @@
         document.addEventListener("paste", (e) => {
           const activeCard = document.activeElement;
 
-          // Only trigger paste if the card container itself is selected (not the caption text input inside it)
           if (activeCard && activeCard.classList.contains("slot-card")) {
             const slotId = parseInt(activeCard.dataset.slot);
             const items = e.clipboardData.items;
@@ -420,7 +419,6 @@
           }
         });
 
-        // Focus the card if clicked (excluding the controls/input)
         element.addEventListener("click", (e) => {
           if (e.target.tagName !== "INPUT" && e.target.tagName !== "BUTTON") {
             element.focus();
@@ -443,18 +441,19 @@
           const idx = slotId - 1;
 
           slots[idx].image = base64Image;
-          slots[idx].visible = true;
+          slots[idx].visible = false; // FIX: Hidden by default when loaded
 
           // Update Card UI state
           const card = document.getElementById(`slot-card-${slotId}`);
-          card.classList.add("has-image", "showing");
+          card.classList.add("has-image");
+          card.classList.remove("showing"); // Ensure the green 'showing' border is not added yet
 
           const thumb = document.getElementById(`thumb-${slotId}`);
           thumb.innerHTML = `<img src="${base64Image}" alt="Thumbnail">`;
 
           const toggleBtn = document.getElementById(`toggle-${slotId}`);
-          toggleBtn.textContent = "Hide";
-          toggleBtn.classList.add("showing");
+          toggleBtn.textContent = "Show"; // Button defaults to 'Show'
+          toggleBtn.classList.remove("showing");
           toggleBtn.disabled = false;
 
           const removeBtn = document.getElementById(`remove-${slotId}`);
@@ -463,9 +462,9 @@
           const captionInput = document.getElementById(`caption-${slotId}`);
           captionInput.disabled = false;
 
-          broadcastState();
+          broadcastState(); // Sync the loaded-but-hidden state
 
-          status.textContent = `Slot ${slotId} updated!`;
+          status.textContent = `Slot ${slotId} loaded privately!`;
           status.style.color = "#2ecc71";
         };
 
@@ -546,7 +545,6 @@
       }
 
       function broadcastState() {
-        // Packages the image data alongside its typed caption
         const visibleItems = slots
           .filter((s) => s.image && s.visible)
           .map((s) => ({ image: s.image, caption: s.caption }));
@@ -578,7 +576,6 @@
         );
         currentWrappers.forEach((wrap) => wrap.remove());
 
-        // Limit display to 9 items
         const itemsToShow = items.slice(0, 9);
 
         if (!itemsToShow || itemsToShow.length === 0) {
@@ -606,7 +603,6 @@
           img.src = item.image;
           wrapper.appendChild(img);
 
-          // Dynamically build and add the caption overlay if text has been entered
           if (item.caption && item.caption.trim() !== "") {
             const caption = document.createElement("div");
             caption.className = "player-caption";
