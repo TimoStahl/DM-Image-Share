@@ -6,7 +6,7 @@ If you play games like Dungeons & Dragons in person with a second TV or monitor 
 
 ## Key Features
 
-- **10 Independent Slots:** Prepare your maps, NPC portraits, and monster statblocks in advance.
+- **Expandable Slots:** Start with 5 independent slots and click 'Add 5 Slots' to append another row whenever you need more room for maps, NPC portraits, and monster statblocks.
 - **Privacy-First Workflow:** Newly pasted or dropped images are hidden from your players by default. You can quietly add captions and prepare slots, pushing them to the player screen only when you click the green 'Show' button.
 - **Live Captioning:** Type real-time titles or labels that instantly display below the images on the players' screen.
 - **Intelligent Grid Scaling:** The player screen automatically calculates the best layout to maximize screen space for up to 9 active images (automatically organizing them into structured 2x2, 2x3, or 3x3 grids).
@@ -39,6 +39,7 @@ Because this tool is built entirely into a single file, setup takes less than a 
 
 - Click once on any slot card (it will highlight with a blue outline) and press 'Ctrl + V' to paste a screenshot.
 - Alternatively, drag any image file from your computer's folders and drop it directly onto the slot card.
+- Need more slots? Click 'Add 5 Slots' at the top of the DM Panel to add another row of five empty slots.
 
 ### 2. Managing the Display
 
@@ -54,7 +55,8 @@ Because this tool is built entirely into a single file, setup takes less than a 
 
 ### 4. Saving & Loading Sessions (Export/Import)
 
-- **To Save Your Work:** When your session is prepared or when a game night ends, click the 'Export Session' button at the top of the DM Panel. This will download a lightweight '.json' file containing all 10 slots, images, and captions to your computer.
+- **To Save Your Work:** When your session is prepared or when a game night ends, click the 'Export Session' button at the top of the DM Panel. This will download a lightweight '.json' file containing all of your slots, images, and captions to your computer.
+- Importing a session restores exactly as many slots as the file contains, so your expanded rows come back with it.
 - **To Resume Your Game:** At the start of your next game, open 'share.html' on both screens, select your roles, and click 'Import Session' on the DM Panel. Choose your saved file, and your entire layout will instantly restore and sync to the players' monitor.
 
 ### 5. Grid Rules
@@ -67,4 +69,4 @@ The players' screen will dynamically adjust to maximize space depending on how m
 - **5 or 6 Images:** 2 rows, 3 columns.
 - **7 or 8 Images:** 2 rows, 4 columns.
 - **9 Images:** 3x3 grid.
-- _Note: A 10th active image will be safely ignored on the player screen to keep the grid looking clean._
+- _Note: Any active images beyond the 9th will be safely ignored on the player screen to keep the grid looking clean._

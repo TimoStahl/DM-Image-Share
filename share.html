@@ -298,6 +298,7 @@
         <button class="control-btn" onclick="triggerImport()">
           Import Session
         </button>
+        <button class="control-btn" onclick="addSlots()">Add 5 Slots</button>
         <input
           type="file"
           id="import-file-input"
@@ -332,13 +333,15 @@
       const channel = new BroadcastChannel("dm_screen_share_pro_grid");
       let isBlackout = false;
 
-      // DM State tracking for 10 slots
-      let slots = Array.from({ length: 10 }, (_, i) => ({
-        id: i + 1,
-        image: null,
-        caption: "",
-        visible: false,
-      }));
+      const INITIAL_SLOTS = 5;
+      const SLOTS_PER_ROW = 5;
+
+      // DM State tracking, grows in rows of 5
+      let slots = [];
+
+      function createSlot(id) {
+        return { id, image: null, caption: "", visible: false };
+      }
 
       function initRole(role) {
         document.getElementById("setup").style.display = "none";
@@ -353,18 +356,16 @@
       }
 
       // --- DM logic ---
-      function setupDM() {
+      function buildSlotCard(i) {
         const container = document.getElementById("slots-container");
 
-        // Build the 10 slots programmatically
-        for (let i = 1; i <= 10; i++) {
-          const card = document.createElement("div");
-          card.className = "slot-card";
-          card.id = `slot-card-${i}`;
-          card.dataset.slot = i;
-          card.tabIndex = 0;
+        const card = document.createElement("div");
+        card.className = "slot-card";
+        card.id = `slot-card-${i}`;
+        card.dataset.slot = i;
+        card.tabIndex = 0;
 
-          card.innerHTML = `
+        card.innerHTML = `
                     <div class="slot-header">Slot ${i}</div>
                     <div class="thumb-preview" id="thumb-${i}">No Image Loaded</div>
                     <input type="text" class="caption-input" id="caption-${i}" placeholder="Enter caption..." oninput="updateCaption(${i}, this.value)" disabled>
@@ -374,9 +375,37 @@
                     </div>
                 `;
 
-          container.appendChild(card);
-          setupBoxListeners(card, i);
+        container.appendChild(card);
+        setupBoxListeners(card, i);
+      }
+
+      // Rebuilds every card from the current slots array
+      function renderAllSlots() {
+        document.getElementById("slots-container").innerHTML = "";
+        slots.forEach((slot) => {
+          buildSlotCard(slot.id);
+          updateSlotUI(slot.id);
+        });
+      }
+
+      function addSlots() {
+        for (let i = 0; i < SLOTS_PER_ROW; i++) {
+          const id = slots.length + 1;
+          slots.push(createSlot(id));
+          buildSlotCard(id);
+          updateSlotUI(id);
         }
+
+        const status = document.getElementById("status");
+        status.textContent = `${SLOTS_PER_ROW} slots added (${slots.length} total)`;
+        status.style.color = "#2ecc71";
+      }
+
+      function setupDM() {
+        slots = Array.from({ length: INITIAL_SLOTS }, (_, i) =>
+          createSlot(i + 1),
+        );
+        renderAllSlots();
 
         // Global Paste Listener
         document.addEventListener("paste", (e) => {
@@ -580,12 +609,13 @@
         reader.onload = function (e) {
           try {
             const importedSlots = JSON.parse(e.target.result);
-            if (Array.isArray(importedSlots) && importedSlots.length === 10) {
-              slots = importedSlots;
-              // Re-render each Slot's UI card
-              for (let i = 1; i <= 10; i++) {
-                updateSlotUI(i);
-              }
+            if (Array.isArray(importedSlots) && importedSlots.length > 0) {
+              slots = importedSlots.map((slot, i) => ({
+                ...createSlot(i + 1),
+                ...slot,
+                id: i + 1,
+              }));
+              renderAllSlots();
               broadcastState();
 
               const status = document.getElementById("status");
