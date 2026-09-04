@@ -19,7 +19,7 @@ If you play games like Dungeons & Dragons in person with a second TV or monitor 
 
 ## Demo
 
-![Demo of DM Image Sharero](Demo.gif)
+![Demo of DM Image Share](demo/Demo.gif)
 
 ---
 

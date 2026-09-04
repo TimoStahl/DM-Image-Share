@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>DM Image Share</title>
+    <!-- INJECT_CSS_HERE -->
+  </head>
+  <body>
+    <!-- Role Selection (Shows on load) -->
+    <div id="setup">
+      <h2>Select Role for this Window:</h2>
+      <button class="role-btn" onclick="initRole('dm')">DM (Sender)</button>
+      <button class="role-btn" onclick="initRole('player')">
+        Players (Receiver)
+      </button>
+    </div>
+
+    <!-- DM View -->
+    <div id="dm-view" style="display: none">
+      <h2>DM Control Panel</h2>
+      <div class="control-group">
+        <button
+          class="control-btn"
+          id="btn-blackout"
+          onclick="toggleBlackout()"
+        >
+          Hide Screen (Blackout)
+        </button>
+        <button class="control-btn" onclick="exportSession()">
+          Export Session
+        </button>
+        <button class="control-btn" onclick="triggerImport()">
+          Import Session
+        </button>
+        <button class="control-btn" onclick="addSlots()">Add 5 Slots</button>
+        <input
+          type="file"
+          id="import-file-input"
+          accept=".json"
+          style="display: none"
+          onchange="importSession(event)"
+        />
+      </div>
+      <p style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px">
+        Click a slot to select it, then paste ('Ctrl + V'), or drag and drop an
+        image file directly into it.
+      </p>
+      <div id="slots-container"></div>
+      <p style="margin-top: 20px">
+        Status: <span id="status" style="color: #2ecc71">Ready</span>
+      </p>
+    </div>
+
+    <!-- Player View Container -->
+    <div id="display-container">
+      <div id="player-placeholder">Waiting for DM...</div>
+    </div>
+
+    <!-- Blackout Screen Overlay -->
+    <div id="blackout-overlay"></div>
+
+    <!-- INJECT_JS_HERE -->
+  </body>
+</html>

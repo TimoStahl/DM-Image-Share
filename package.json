@@ -1,0 +1,13 @@
+{
+  "name": "dm-image-share-builder",
+  "version": "1.0.0",
+  "description": "Compiles split files into a single, offline HTML file.",
+  "main": "build.js",
+  "scripts": {
+    "build": "node build.js",
+    "watch": "nodemon --watch src -e html,css,js --exec \"npm run build\""
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
