@@ -14,7 +14,10 @@ function buildSlotCard(i) {
   card.dataset.slot = i;
   card.tabIndex = 0;
   card.innerHTML = `
-        <div class="slot-header">Slot ${i}</div>
+        <div class="slot-header">
+            <span class="drag-handle" draggable="true" title="Drag to reorder">\u2630</span>
+            <span class="slot-label">Slot ${i}</span>
+        </div>
         <div class="thumb-preview" id="thumb-${i}">No Image Loaded</div>
         <input type="text" class="caption-input" id="caption-${i}" placeholder="Enter caption..." oninput="updateCaption(${i}, this.value)" disabled>
         <div class="slot-controls">
@@ -24,6 +27,10 @@ function buildSlotCard(i) {
     `;
   container.appendChild(card);
   setupBoxListeners(card, i);
+
+  const handle = card.querySelector(".drag-handle");
+  handle.addEventListener("dragstart", (e) => handleDragStart(e, i));
+  handle.addEventListener("dragend", handleDragEnd);
 }
 
 function renderAllSlots() {
@@ -88,8 +95,11 @@ function setupBoxListeners(element, slotId) {
   });
   element.addEventListener("drop", (e) => {
     const files = e.dataTransfer.files;
+    const sourceId = e.dataTransfer.getData("text/plain");
     if (files.length > 0) {
       processImageFile(files[0], slotId);
+    } else if (sourceId) {
+      reorderSlots(parseInt(sourceId, 10), slotId);
     }
   });
   element.addEventListener("click", (e) => {
@@ -158,6 +168,32 @@ function updateCaption(slotId, text) {
   const idx = slotId - 1;
   slots[idx].caption = text;
   broadcastState();
+}
+
+function handleDragStart(e, slotId) {
+  e.dataTransfer.setData("text/plain", String(slotId));
+  e.dataTransfer.effectAllowed = "move";
+  e.currentTarget.closest(".slot-card").classList.add("dragging");
+}
+
+function handleDragEnd() {
+  document
+    .querySelectorAll(".slot-card.dragging")
+    .forEach((el) => el.classList.remove("dragging"));
+}
+
+function reorderSlots(sourceId, targetId) {
+  if (sourceId === targetId || isNaN(sourceId)) return;
+  const [moved] = slots.splice(sourceId - 1, 1);
+  slots.splice(targetId - 1, 0, moved);
+  slots.forEach((slot, i) => {
+    slot.id = i + 1;
+  });
+  renderAllSlots();
+  broadcastState();
+  const status = document.getElementById("status");
+  status.textContent = `Slot moved to position ${targetId}`;
+  status.style.color = "#3498db";
 }
 
 function toggleSlot(slotId, event) {
