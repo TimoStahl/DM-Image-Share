@@ -288,7 +288,7 @@ body {
           id="btn-blackout"
           onclick="toggleBlackout()"
         >
-          Hide Screen (Blackout)
+          Hide Screen
         </button>
         <button class="control-btn" onclick="exportSession()">
           Export Session
@@ -634,40 +634,97 @@ function getImageAspectRatio(base64) {
   });
 }
 
-function getRowsDistribution(arr) {
-  const n = arr.length;
-  if (n <= 1) return [arr];
+const ROW_GAP = 20;
+const IMG_GAP = 20;
 
-  const totalRatio = arr.reduce((sum, item) => sum + item.ratio, 0);
+function getContainerAvailableSize() {
+  const container = document.getElementById("display-container");
+  const rect = container.getBoundingClientRect();
+  const cs = getComputedStyle(container);
+  const paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  return { width: rect.width - paddingX, height: rect.height - paddingY };
+}
 
-  let numRows = 1;
-  if (n >= 3) {
-    if (totalRatio <= 2.2) {
-      numRows = 1; // Collapse portrait clusters
-    } else if (totalRatio <= 4.5 && n <= 6) {
-      numRows = 2;
-    } else if (n <= 8) {
-      numRows = 2;
-    } else {
-      numRows = 3;
+// Area actually covered by images (object-fit: contain) if grouped items[start..end] form one row.
+function computeRowUsedArea(items, start, end, rowWidth, rowHeight) {
+  const count = end - start + 1;
+  const availWidth = rowWidth - (count - 1) * IMG_GAP;
+  let ratioSum = 0;
+  for (let i = start; i <= end; i++) ratioSum += items[i].ratio;
+
+  let used = 0;
+  for (let i = start; i <= end; i++) {
+    const ratio = items[i].ratio;
+    const boxWidth = (ratio / ratioSum) * availWidth;
+    const boxAspect = boxWidth / rowHeight;
+    const imgWidth = boxAspect > ratio ? rowHeight * ratio : boxWidth;
+    const imgHeight = boxAspect > ratio ? rowHeight : boxWidth / ratio;
+    used += imgWidth * imgHeight;
+  }
+  return used;
+}
+
+// Best contiguous split of items into exactly numRows rows, maximizing displayed image area.
+function partitionIntoRows(items, numRows, containerWidth, containerHeight) {
+  const n = items.length;
+  const rowHeight = (containerHeight - (numRows - 1) * ROW_GAP) / numRows;
+  if (rowHeight <= 0) return null;
+
+  const dp = Array.from({ length: numRows + 1 }, () =>
+    new Array(n + 1).fill(-Infinity),
+  );
+  const split = Array.from({ length: numRows + 1 }, () =>
+    new Array(n + 1).fill(-1),
+  );
+  dp[0][0] = 0;
+
+  for (let row = 1; row <= numRows; row++) {
+    for (let i = row; i <= n; i++) {
+      for (let m = row - 1; m < i; m++) {
+        if (dp[row - 1][m] === -Infinity) continue;
+        const value =
+          dp[row - 1][m] +
+          computeRowUsedArea(items, m, i - 1, containerWidth, rowHeight);
+        if (value > dp[row][i]) {
+          dp[row][i] = value;
+          split[row][i] = m;
+        }
+      }
     }
   }
 
-  if (numRows === 1) return [arr];
+  if (dp[numRows][n] === -Infinity) return null;
 
-  const result = [];
-  let startIndex = 0;
+  const rows = [];
+  let i = n;
+  for (let row = numRows; row >= 1; row--) {
+    const m = split[row][i];
+    rows.unshift(items.slice(m, i));
+    i = m;
+  }
+  return { rows, usedArea: dp[numRows][n] };
+}
 
-  for (let r = 0; r < numRows; r++) {
-    const remainingItems = n - startIndex;
-    const remainingRows = numRows - r;
-    const count = Math.ceil(remainingItems / remainingRows);
-    if (count > 0) {
-      result.push(arr.slice(startIndex, startIndex + count));
-      startIndex += count;
+// Picks the row grouping (1..4 rows) that maximizes total displayed image area.
+function getOptimalRows(items, containerWidth, containerHeight) {
+  const n = items.length;
+  if (n <= 1) return [items];
+
+  let best = null;
+  const maxRows = Math.min(4, n);
+  for (let numRows = 1; numRows <= maxRows; numRows++) {
+    const result = partitionIntoRows(
+      items,
+      numRows,
+      containerWidth,
+      containerHeight,
+    );
+    if (result && (!best || result.usedArea > best.usedArea)) {
+      best = result;
     }
   }
-  return result;
+  return best ? best.rows : [items];
 }
 
 async function renderPlayerGrid(items) {
@@ -705,7 +762,8 @@ async function renderPlayerGrid(items) {
 
   if (taskId !== currentRenderTaskId) return;
 
-  const rowsData = getRowsDistribution(itemsWithRatios);
+  const { width, height } = getContainerAvailableSize();
+  const rowsData = getOptimalRows(itemsWithRatios, width, height);
 
   rowsData.forEach((rowData) => {
     const rowDiv = document.createElement("div");
