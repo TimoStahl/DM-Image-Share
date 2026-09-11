@@ -148,9 +148,21 @@ function updateSlotUI(slotId) {
   const captionInput = document.getElementById(`caption-${slotId}`);
   if (slot.image || slot.markdown) {
     card.classList.add("has-image");
-    thumb.innerHTML = slot.image
-      ? `<img src="${slot.image}" alt="Thumbnail">`
-      : `<div class="markdown-preview-label">\u{1F4DD} Markdown Snippet</div>`;
+    if (slot.image) {
+      thumb.innerHTML = `<img src="${slot.image}" alt="Thumbnail">`;
+    } else {
+      const preview = slot.markdown.trim().slice(0, 80);
+      thumb.innerHTML = "";
+      const label = document.createElement("div");
+      label.className = "markdown-preview-label";
+      label.textContent = "\u{1F4DD} Markdown Snippet";
+      const snippet = document.createElement("div");
+      snippet.className = "markdown-preview-snippet";
+      snippet.textContent =
+        preview + (slot.markdown.trim().length > 80 ? "\u2026" : "");
+      thumb.appendChild(label);
+      thumb.appendChild(snippet);
+    }
     toggleBtn.disabled = false;
     exclusiveBtn.disabled = false;
     removeBtn.disabled = false;
