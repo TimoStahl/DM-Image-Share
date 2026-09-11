@@ -1,4 +1,5 @@
 let currentRenderTaskId = 0;
+let previousImageKeys = new Set();
 
 function setupPlayer() {
   channel.onmessage = function (event) {
@@ -154,23 +155,29 @@ async function renderPlayerGrid(items) {
   const { width, height } = getContainerAvailableSize();
   const rowsData = getOptimalRows(itemsWithRatios, width, height);
 
+  const currentImageKeys = new Set(itemsWithRatios.map((item) => item.image));
+
   rowsData.forEach((rowData) => {
     const rowDiv = document.createElement("div");
     rowDiv.className = "player-row";
 
     rowData.forEach((item) => {
+      const isNew = !previousImageKeys.has(item.image);
+
       const wrapper = document.createElement("div");
-      wrapper.className = "player-img-wrapper";
+      wrapper.className = isNew
+        ? "player-img-wrapper is-new"
+        : "player-img-wrapper";
       wrapper.style.flex = `${item.ratio} 1 0%`;
 
       const img = document.createElement("img");
-      img.className = "player-img";
+      img.className = isNew ? "player-img is-new" : "player-img";
       img.src = item.image;
       wrapper.appendChild(img);
 
       if (item.caption && item.caption.trim() !== "") {
         const caption = document.createElement("div");
-        caption.className = "player-caption";
+        caption.className = isNew ? "player-caption is-new" : "player-caption";
         caption.textContent = item.caption;
         wrapper.appendChild(caption);
       }
@@ -180,4 +187,6 @@ async function renderPlayerGrid(items) {
 
     container.appendChild(rowDiv);
   });
+
+  previousImageKeys = currentImageKeys;
 }

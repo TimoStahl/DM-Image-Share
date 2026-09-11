@@ -184,6 +184,12 @@ body {
 .toggle-btn.showing:hover {
   background-color: #27ae60;
 }
+.exclusive-btn {
+  background-color: #9b59b6;
+}
+.exclusive-btn:hover {
+  background-color: #8e44ad;
+}
 .remove-btn {
   background-color: #e74c3c;
 }
@@ -219,6 +225,9 @@ body {
   width: 100%;
   overflow: hidden;
 }
+.player-img-wrapper.is-new {
+  animation: arcane-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
 .player-img {
   flex: 1;
   min-height: 0;
@@ -240,6 +249,40 @@ body {
   word-wrap: break-word;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   flex-shrink: 0;
+}
+.player-caption.is-new {
+  animation: arcane-caption 0.5s ease-out 0.25s both;
+}
+@keyframes arcane-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes arcane-caption {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .player-img-wrapper,
+  .player-img,
+  .player-caption {
+    animation: none !important;
+  }
 }
 #player-placeholder {
   font-size: 1.8rem;

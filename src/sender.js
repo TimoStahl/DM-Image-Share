@@ -22,6 +22,7 @@ function buildSlotCard(i) {
         <input type="text" class="caption-input" id="caption-${i}" placeholder="Enter caption..." oninput="updateCaption(${i}, this.value)" disabled>
         <div class="slot-controls">
             <button class="slot-btn toggle-btn" id="toggle-${i}" onclick="toggleSlot(${i}, event)" disabled>Show</button>
+            <button class="slot-btn exclusive-btn" id="exclusive-${i}" onclick="showExclusive(${i}, event)" disabled>Solo</button>
             <button class="slot-btn remove-btn" id="remove-${i}" onclick="clearSlot(${i}, event)" disabled>Remove</button>
         </div>
     `;
@@ -134,12 +135,14 @@ function updateSlotUI(slotId) {
   const card = document.getElementById(`slot-card-${slotId}`);
   const thumb = document.getElementById(`thumb-${slotId}`);
   const toggleBtn = document.getElementById(`toggle-${slotId}`);
+  const exclusiveBtn = document.getElementById(`exclusive-${slotId}`);
   const removeBtn = document.getElementById(`remove-${slotId}`);
   const captionInput = document.getElementById(`caption-${slotId}`);
   if (slot.image) {
     card.classList.add("has-image");
     thumb.innerHTML = `<img src="${slot.image}" alt="Thumbnail">`;
     toggleBtn.disabled = false;
+    exclusiveBtn.disabled = false;
     removeBtn.disabled = false;
     captionInput.disabled = false;
     captionInput.value = slot.caption || "";
@@ -158,6 +161,7 @@ function updateSlotUI(slotId) {
     toggleBtn.textContent = "Show";
     toggleBtn.classList.remove("showing");
     toggleBtn.disabled = true;
+    exclusiveBtn.disabled = true;
     removeBtn.disabled = true;
     captionInput.value = "";
     captionInput.disabled = true;
@@ -203,6 +207,20 @@ function toggleSlot(slotId, event) {
   slots[idx].visible = !slots[idx].visible;
   updateSlotUI(slotId);
   broadcastState();
+}
+
+function showExclusive(slotId, event) {
+  if (event) event.stopPropagation();
+  const idx = slotId - 1;
+  if (!slots[idx].image) return;
+  slots.forEach((slot, i) => {
+    slot.visible = i === idx;
+    updateSlotUI(slot.id);
+  });
+  broadcastState();
+  const status = document.getElementById("status");
+  status.textContent = `Slot ${slotId} shown exclusively!`;
+  status.style.color = "#9b59b6";
 }
 
 function clearSlot(slotId, event) {
