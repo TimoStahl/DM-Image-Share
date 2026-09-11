@@ -59,6 +59,31 @@
     <!-- Blackout Screen Overlay -->
     <div id="blackout-overlay"></div>
 
+    <!-- Markdown Snippet Editor Popover -->
+    <div
+      id="markdown-modal"
+      class="modal-overlay"
+      style="display: none"
+      onclick="handleMarkdownModalBackdropClick(event)"
+    >
+      <div class="modal-box">
+        <h3 id="markdown-modal-title">Edit Markdown Snippet</h3>
+        <textarea
+          id="markdown-modal-textarea"
+          class="markdown-modal-textarea"
+          placeholder="Write Markdown here..."
+        ></textarea>
+        <div class="modal-actions">
+          <button class="control-btn" onclick="closeMarkdownModal()">
+            Cancel
+          </button>
+          <button class="control-btn" onclick="saveMarkdownModal()">
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- INJECT_JS_HERE -->
   </body>
 </html>

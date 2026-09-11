@@ -7,13 +7,17 @@ If you play games like Dungeons & Dragons in person with a second TV or monitor 
 ## Key Features
 
 - **Expandable Slots:** Start with 5 independent slots and click 'Add 5 Slots' to append another row whenever you need more room for maps, NPC portraits, and monster statblocks.
+- **Drag-and-Drop Reordering:** Grab the ☰ handle on any slot and drop it onto another to instantly swap their positions—the players' screen re-arranges to match.
 - **Privacy-First Workflow:** Newly pasted or dropped images are hidden from your players by default. You can quietly add captions and prepare slots, pushing them to the player screen only when you click the green 'Show' button.
+- **Solo / Spotlight Mode:** Click 'Solo' on any slot to show that image or snippet by itself and instantly hide everything else—perfect for a dramatic reveal.
 - **Live Captioning:** Type real-time titles or labels that instantly display below the images on the players' screen.
-- **Intelligent Grid Scaling:** The player screen automatically calculates the best layout to maximize screen space for up to 9 active images (automatically organizing them into structured 2x2, 2x3, or 3x3 grids).
+- **Intelligent Grid Scaling:** The player screen automatically tests different row groupings and picks whichever one displays the most image area with the least wasted space, for up to 9 active images/snippets.
 - **Frictionless Uploads:** Quickly select a slot and press 'Ctrl + V' to paste a screenshot, or simply drag and drop an image file directly from your computer.
+- **Magical Reveal Animation:** Newly shown images pop and fade into view on the players' screen with a subtle fantasy-themed flourish, while unchanged images stay put.
 - **Master Blackout:** Instantly hide the players' screen with a single click, keeping your active layouts ready to restore at a second's notice.
 - **Session Saving:** Export your entire setup—including images, custom captions, and show/hide visibility settings—into a lightweight file on your computer, allowing you to load it up instantly for your next session.
 - **100% Offline & Private:** Uses your browser's built-in 'BroadcastChannel' technology. It requires no servers, no internet connection, and never uploads your images anywhere.
+- **_(Experimental)_ Markdown Snippets:** Instead of an image, a slot can hold a Markdown snippet (handouts, read-aloud text, stat blocks) that's rendered on the players' screen.
 
 ---
 
@@ -46,6 +50,7 @@ Because this tool is built entirely into a single file, setup takes less than a 
 - When an image is first loaded, it will appear in your control panel but remain hidden from the players.
 - Click the grey 'Show' button to push it to the players' screen. The card will highlight green to confirm they can see it.
 - Click 'Hide' to temporarily take it off their screen while keeping it saved in your slot.
+- Click the purple 'Solo' button to show only that slot, automatically hiding every other visible slot at the same time.
 - Click 'Remove' to delete the image and caption completely from the slot.
 
 ### 3. Adding Captions
@@ -53,20 +58,30 @@ Because this tool is built entirely into a single file, setup takes less than a 
 - Type into the text input box below any loaded image.
 - The caption will instantly display in a styled black-and-glass overlay right below the image on the players' screen.
 
-### 4. Saving & Loading Sessions (Export/Import)
+### 4. Reordering Slots
+
+- Grab the ☰ drag handle in a slot's header and drop it onto another slot card to swap their positions.
+- The slots renumber automatically, and the players' screen re-arranges to match the new left-to-right/top-to-bottom order the next time anything is shown.
+
+### 5. Saving & Loading Sessions (Export/Import)
 
 - **To Save Your Work:** When your session is prepared or when a game night ends, click the 'Export Session' button at the top of the DM Panel. This will download a lightweight '.json' file containing all of your slots, images, and captions to your computer.
 - Importing a session restores exactly as many slots as the file contains, so your expanded rows come back with it.
 - **To Resume Your Game:** At the start of your next game, open 'share.html' on both screens, select your roles, and click 'Import Session' on the DM Panel. Choose your saved file, and your entire layout will instantly restore and sync to the players' monitor.
 
-### 5. Grid Rules
+### 6. _(Experimental)_ Markdown Snippets
 
-The players' screen will dynamically adjust to maximize space depending on how many images you have set to 'Show':
+> This feature is experimental and may change or break between versions.
 
-- **1 Image:** Full screen.
-- **2 Images:** 1 row, 2 columns (side-by-side).
-- **3 or 4 Images:** Clean 2x2 grid.
-- **5 or 6 Images:** 2 rows, 3 columns.
-- **7 or 8 Images:** 2 rows, 4 columns.
-- **9 Images:** 3x3 grid.
+- Click the 📝 icon in a slot's header to open the Markdown editor popover.
+- Write a snippet (headings, lists, bold/italic text, tables, read-aloud boxes, etc.) using standard Markdown syntax, then click 'Save'.
+- Saving a snippet clears any image in that slot, and loading an image clears any snippet—each slot holds one or the other.
+- 'Show'/'Solo'/'Hide' work exactly the same as for images, and the rendered snippet is included in the players' grid layout alongside any visible images.
+
+### 7. Grid Rules
+
+Rather than following a fixed table, the players' screen tries every reasonable row grouping (1 to 4 rows) for the currently visible images/snippets and keeps whichever arrangement fills the screen with the least wasted space, based on each item's real aspect ratio.
+
+- Order is always preserved left-to-right, then top-to-bottom, matching your slot order in the DM Panel.
+- A single image or snippet fills the whole screen; additional items are grouped into rows so that, as a whole, they use as much of the screen as possible.
 - _Note: Any active images beyond the 9th will be safely ignored on the player screen to keep the grid looking clean._

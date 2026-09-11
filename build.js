@@ -18,8 +18,20 @@ try {
   const receiverJs = fs.readFileSync(path.join(srcDir, "receiver.js"), "utf8");
   const appJs = fs.readFileSync(path.join(srcDir, "app.js"), "utf8");
 
+  // Vendor libraries (bundled inline so the output stays a single offline file)
+  const markedJs = fs.readFileSync(
+    path.join(__dirname, "node_modules", "marked", "lib", "marked.umd.js"),
+    "utf8",
+  );
+  const domPurifyJs = fs.readFileSync(
+    path.join(__dirname, "node_modules", "dompurify", "dist", "purify.min.js"),
+    "utf8",
+  );
+
   // Combine scripts in structural order
   const combinedJs = `
+${markedJs}
+${domPurifyJs}
 ${senderJs}
 ${receiverJs}
 ${appJs}

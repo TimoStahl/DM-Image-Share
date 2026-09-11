@@ -3,7 +3,7 @@ const SLOTS_PER_ROW = 5;
 let slots = [];
 
 function createSlot(id) {
-  return { id, image: null, caption: "", visible: false };
+  return { id, image: null, markdown: "", caption: "", visible: false };
 }
 
 function buildSlotCard(i) {
@@ -17,6 +17,7 @@ function buildSlotCard(i) {
         <div class="slot-header">
             <span class="drag-handle" draggable="true" title="Drag to reorder">\u2630</span>
             <span class="slot-label">Slot ${i}</span>
+            <button class="markdown-edit-btn" id="markdown-edit-${i}" onclick="openMarkdownModal(${i}, event)" title="Edit Markdown Snippet">\u{1F4DD}</button>
         </div>
         <div class="thumb-preview" id="thumb-${i}">No Image Loaded</div>
         <input type="text" class="caption-input" id="caption-${i}" placeholder="Enter caption..." oninput="updateCaption(${i}, this.value)" disabled>
@@ -73,6 +74,12 @@ function setupDM() {
     }
   });
 
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && markdownModalSlotId !== null) {
+      closeMarkdownModal();
+    }
+  });
+
   document.getElementById("slot-card-1").focus();
 }
 
@@ -120,6 +127,7 @@ function processImageFile(file, slotId) {
     const base64Image = event.target.result;
     const idx = slotId - 1;
     slots[idx].image = base64Image;
+    slots[idx].markdown = "";
     slots[idx].visible = false;
     updateSlotUI(slotId);
     broadcastState();
@@ -138,9 +146,11 @@ function updateSlotUI(slotId) {
   const exclusiveBtn = document.getElementById(`exclusive-${slotId}`);
   const removeBtn = document.getElementById(`remove-${slotId}`);
   const captionInput = document.getElementById(`caption-${slotId}`);
-  if (slot.image) {
+  if (slot.image || slot.markdown) {
     card.classList.add("has-image");
-    thumb.innerHTML = `<img src="${slot.image}" alt="Thumbnail">`;
+    thumb.innerHTML = slot.image
+      ? `<img src="${slot.image}" alt="Thumbnail">`
+      : `<div class="markdown-preview-label">\u{1F4DD} Markdown Snippet</div>`;
     toggleBtn.disabled = false;
     exclusiveBtn.disabled = false;
     removeBtn.disabled = false;
@@ -174,6 +184,43 @@ function updateCaption(slotId, text) {
   broadcastState();
 }
 
+function updateMarkdown(slotId, text) {
+  const idx = slotId - 1;
+  slots[idx].markdown = text;
+  if (text) slots[idx].image = null;
+  updateSlotUI(slotId);
+  broadcastState();
+}
+
+let markdownModalSlotId = null;
+
+function openMarkdownModal(slotId, event) {
+  if (event) event.stopPropagation();
+  markdownModalSlotId = slotId;
+  document.getElementById("markdown-modal-title").textContent =
+    `Edit Markdown Snippet \u2013 Slot ${slotId}`;
+  const textarea = document.getElementById("markdown-modal-textarea");
+  textarea.value = slots[slotId - 1].markdown || "";
+  document.getElementById("markdown-modal").style.display = "flex";
+  textarea.focus();
+}
+
+function closeMarkdownModal() {
+  document.getElementById("markdown-modal").style.display = "none";
+  markdownModalSlotId = null;
+}
+
+function saveMarkdownModal() {
+  if (markdownModalSlotId === null) return;
+  const text = document.getElementById("markdown-modal-textarea").value;
+  updateMarkdown(markdownModalSlotId, text);
+  closeMarkdownModal();
+}
+
+function handleMarkdownModalBackdropClick(event) {
+  if (event.target.id === "markdown-modal") closeMarkdownModal();
+}
+
 function handleDragStart(e, slotId) {
   e.dataTransfer.setData("text/plain", String(slotId));
   e.dataTransfer.effectAllowed = "move";
@@ -203,7 +250,7 @@ function reorderSlots(sourceId, targetId) {
 function toggleSlot(slotId, event) {
   if (event) event.stopPropagation();
   const idx = slotId - 1;
-  if (!slots[idx].image) return;
+  if (!slots[idx].image && !slots[idx].markdown) return;
   slots[idx].visible = !slots[idx].visible;
   updateSlotUI(slotId);
   broadcastState();
@@ -212,7 +259,7 @@ function toggleSlot(slotId, event) {
 function showExclusive(slotId, event) {
   if (event) event.stopPropagation();
   const idx = slotId - 1;
-  if (!slots[idx].image) return;
+  if (!slots[idx].image && !slots[idx].markdown) return;
   slots.forEach((slot, i) => {
     slot.visible = i === idx;
     updateSlotUI(slot.id);
@@ -227,6 +274,7 @@ function clearSlot(slotId, event) {
   if (event) event.stopPropagation();
   const idx = slotId - 1;
   slots[idx].image = null;
+  slots[idx].markdown = "";
   slots[idx].visible = false;
   slots[idx].caption = "";
   updateSlotUI(slotId);
@@ -295,7 +343,12 @@ function importSession(event) {
 
 function broadcastState() {
   const visibleItems = slots
-    .filter((s) => s.image && s.visible)
-    .map((s) => ({ image: s.image, caption: s.caption }));
+    .filter((s) => (s.image || s.markdown) && s.visible)
+    .map((s) => ({
+      type: s.image ? "image" : "markdown",
+      image: s.image,
+      markdown: s.markdown,
+      caption: s.caption,
+    }));
   channel.postMessage({ type: "sync", items: visibleItems });
 }

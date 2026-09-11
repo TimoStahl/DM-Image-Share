@@ -24,6 +24,12 @@ function getImageAspectRatio(base64) {
   });
 }
 
+const MARKDOWN_ASPECT_RATIO = 1.3;
+
+function getItemKey(item) {
+  return item.type === "markdown" ? `md:${item.markdown}` : `img:${item.image}`;
+}
+
 const ROW_GAP = 20;
 const IMG_GAP = 20;
 
@@ -145,6 +151,9 @@ async function renderPlayerGrid(items) {
 
   const itemsWithRatios = await Promise.all(
     itemsToShow.map(async (item) => {
+      if (item.type === "markdown") {
+        return { ...item, ratio: MARKDOWN_ASPECT_RATIO };
+      }
       const ratio = await getImageAspectRatio(item.image);
       return { ...item, ratio };
     }),
@@ -155,14 +164,14 @@ async function renderPlayerGrid(items) {
   const { width, height } = getContainerAvailableSize();
   const rowsData = getOptimalRows(itemsWithRatios, width, height);
 
-  const currentImageKeys = new Set(itemsWithRatios.map((item) => item.image));
+  const currentImageKeys = new Set(itemsWithRatios.map(getItemKey));
 
   rowsData.forEach((rowData) => {
     const rowDiv = document.createElement("div");
     rowDiv.className = "player-row";
 
     rowData.forEach((item) => {
-      const isNew = !previousImageKeys.has(item.image);
+      const isNew = !previousImageKeys.has(getItemKey(item));
 
       const wrapper = document.createElement("div");
       wrapper.className = isNew
@@ -170,10 +179,17 @@ async function renderPlayerGrid(items) {
         : "player-img-wrapper";
       wrapper.style.flex = `${item.ratio} 1 0%`;
 
-      const img = document.createElement("img");
-      img.className = isNew ? "player-img is-new" : "player-img";
-      img.src = item.image;
-      wrapper.appendChild(img);
+      if (item.type === "markdown") {
+        const mdBox = document.createElement("div");
+        mdBox.className = "player-markdown";
+        mdBox.innerHTML = DOMPurify.sanitize(marked.parse(item.markdown || ""));
+        wrapper.appendChild(mdBox);
+      } else {
+        const img = document.createElement("img");
+        img.className = "player-img";
+        img.src = item.image;
+        wrapper.appendChild(img);
+      }
 
       if (item.caption && item.caption.trim() !== "") {
         const caption = document.createElement("div");
